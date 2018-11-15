@@ -1,0 +1,29 @@
+{
+  "name": "tcomb-form-native-builder-utils",
+  "version": "0.0.1",
+  "description": "Utilities for tcomb-form-native-builder and builder-components",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/QuantumBA/tcomb-form-native-builder-utils.git"
+  },
+  "author": "Foqum (http://www.foqum.io/)",
+  "contributors": [
+    "Xiang Chen 'stradivari' <xchen@foqum.io>"
+  ],
+  "dependencies": {
+    "apollo-fetch": "^0.7.0",
+    "babel-runtime": "^6.26.0",
+    "getpayload": "^0.0.1",
+    "object-to-formdata": "github:QuantumBA/object-to-formdata.git",
+    "string-template": "github:QuantumBA/string-template.git",
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/QuantumBA/tcomb-form-native-builder-utils/issues"
+  },
+  "homepage": "https://github.com/QuantumBA/tcomb-form-native-builder-utils#readme"
+}
