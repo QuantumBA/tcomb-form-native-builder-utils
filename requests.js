@@ -5,7 +5,13 @@ import objectToFormData         from 'object-to-formdata'
 
 // Implements recursive object serialization according to JSON spec but without quotes around the keys.
 function stringify(obj_from_json, depth = 0) {
-  if (typeof obj_from_json !== 'object' || Array.isArray(obj_from_json)) {
+  if (Array.isArray(obj_from_json)) {
+    obj = Object
+      .keys(obj_from_json)
+      .map(key => `{${stringify(obj_from_json[key])}}`)
+    return `[${obj}]`
+  }
+  else if (typeof obj_from_json !== 'object') {
     // not an object, stringify using native function
     return JSON.stringify(obj_from_json)
   }
@@ -50,7 +56,6 @@ async function processRemoteUpdateGraphQL(uri, body, meta) {
   body = JSON.stringify(body, (key, value) => (value === null ? '' : value))
   const body_json = JSON.parse(body)
   const body_query = stringify(body_json)
-
   const apolloFetch = createApolloFetch({ uri })
 
   apolloFetch.useAfter(({ response }, next) => {
@@ -164,4 +169,3 @@ export {
   processRemoteUpdateRest,
   processListRemoteUpdate,
 }
-
