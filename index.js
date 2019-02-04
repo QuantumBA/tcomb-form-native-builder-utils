@@ -2,7 +2,7 @@ import {
   processRemoteRequests,
   processRemoteUpdateGraphQL,
   processRemoteUpdateRest,
-  processListRemoteUpdate
+  processListRemoteUpdate,
 } from './requests'
 
 export {

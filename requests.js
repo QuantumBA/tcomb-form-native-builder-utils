@@ -6,12 +6,12 @@ import objectToFormData         from 'object-to-formdata'
 // Implements recursive object serialization according to JSON spec but without quotes around the keys.
 function stringify(obj_from_json, depth = 0) {
   if (Array.isArray(obj_from_json)) {
-    obj = Object
+    const obj = Object
       .keys(obj_from_json)
       .map(key => `{${stringify(obj_from_json[key])}}`)
     return `[${obj}]`
   }
-  else if (typeof obj_from_json !== 'object') {
+  if (typeof obj_from_json !== 'object') {
     // not an object, stringify using native function
     return JSON.stringify(obj_from_json)
   }
@@ -78,23 +78,24 @@ async function processRemoteUpdateGraphQL(uri, body, meta) {
 
 }
 
-async function processRemoteUpdateRest(uri, body, contentType, headers, meta) {
+async function processRemoteUpdateRest(uri, body, contentType, headers) {
 
-  if (contentType === 'application/json') body = JSON.stringify(body, (key, value) => (value === null ? '' : value))
-  else body = objectToFormData(body)
-
+  if (contentType === 'application/json') {
+    body = JSON.stringify(body, (key, value) => (value === null ? '' : value))
+  } else {
+    body = objectToFormData(body)
+  }
 
   return fetch(uri, {
     method: 'POST',
     headers,
     body,
-  })
-    .then(getPayloadError).then(resp => resp)
+  }).then(getPayloadError).then(resp => resp)
 
 }
 
 async function asyncForEach(array, callback) {
-  for (let index = 0; index < array.length; index++) { // eslint-disable-line
+  for (let index = 0; index < array.length; index += 1) {
     await callback(array[index], index, array) // eslint-disable-line
   }
 }
@@ -149,7 +150,6 @@ async function processListRemoteUpdate(remote, formValues) {
       // Graphql API
       if (meta.graphql) {
         response = await processRemoteUpdateGraphQL(uri, postBody, meta)
-
         responses.push(response)
       } else {
         responses.push(await processRemoteUpdateRest(uri, postBody, contentType, headers, meta))
