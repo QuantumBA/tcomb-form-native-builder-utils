@@ -55,6 +55,11 @@ async function processRemoteRequests(uriTemplate, stackedPlaceholders, headers, 
 async function processRemoteUpdateGraphQL(uri, body, meta) {
   body = JSON.stringify(body, (key, value) => (value === null ? '' : value))
   const body_json = JSON.parse(body)
+
+  Object.entries(body_json).forEach(([k, v]) => {
+    if (v === '') delete body_json[k]
+  })
+
   const body_query = stringify(body_json)
   const apolloFetch = createApolloFetch({ uri })
 
