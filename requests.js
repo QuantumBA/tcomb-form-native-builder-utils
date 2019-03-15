@@ -3,6 +3,16 @@ import stringTemplate from 'string-template'
 import { getPayloadError } from 'getpayload'
 import objectToFormData         from 'object-to-formdata'
 
+const removeEmptyKeys = (obj) => {
+  if (!obj) return
+  Object.entries(obj).forEach(([k, v]) => {
+    if (!v) delete obj[k]
+    else if (Array.isArray(v) && v.length && typeof v[0] == 'object') {
+      v.forEach((e) => removeEmptyKeys(e))
+    }
+  })
+}
+
 // Implements recursive object serialization according to JSON spec but without quotes around the keys.
 function stringify(obj_from_json, depth = 0) {
   if (Array.isArray(obj_from_json)) {
@@ -55,6 +65,7 @@ async function processRemoteRequests(uriTemplate, stackedPlaceholders, headers, 
 async function processRemoteUpdateGraphQL(uri, body, meta) {
   body = JSON.stringify(body, (key, value) => (value === null ? '' : value))
   const body_json = JSON.parse(body)
+  removeEmptyKeys(body_json)
 
   const body_query = stringify(body_json)
   const apolloFetch = createApolloFetch({ uri })
@@ -170,3 +181,4 @@ export {
   processRemoteUpdateRest,
   processListRemoteUpdate,
 }
+
