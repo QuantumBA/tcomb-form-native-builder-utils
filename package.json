@@ -20,8 +20,8 @@
 		"apollo-fetch": "^0.7.0",
 		"babel-runtime": "^6.26.0",
 		"getpayload": "^0.0.1",
-		"object-to-formdata": "github:QuantumBA/object-to-formdata.git",
-		"string-template": "github:QuantumBA/string-template.git"
+		"@foqum/object-to-formdata": "~0.0.1",
+		"@foqum/string-template": "~1.0.0"
 	},
 	"devDependencies": {
 		"babel-eslint": "^8.2.1",

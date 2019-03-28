@@ -1,7 +1,7 @@
 import { createApolloFetch } from 'apollo-fetch'
-import stringTemplate from 'string-template'
+import stringTemplate from '@foqum/string-template'
 import { getPayloadError } from 'getpayload'
-import objectToFormData         from 'object-to-formdata'
+import objectToFormData         from '@foqum/object-to-formdata'
 
 const removeEmptyKeys = (obj) => {
   if (!obj) return
