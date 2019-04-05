@@ -125,8 +125,20 @@ async function processListRemoteUpdate(remote, formValues) {
     await asyncForEach(remote, async (remoteObject) => {
       const { meta, uri } = remoteObject
       const { headers = {}, contentType = 'multipart/form-data', updateFields } = meta
-      let postBody = Object.assign({}, formValues)
-
+      let postBody = JSON.parse(JSON.stringify(formValues))
+      Object.keys(postBody).forEach((k) => {
+        if (Array.isArray(postBody[k])) {
+          postBody[k].forEach((v) => {
+            delete v.S3file
+          })
+        }
+      })
+      Object.entries(postBody).forEach(([key, value]) =>{
+        if (typeof value === 'object'){
+          const index = value.indexOf('S3file')
+          delete value[0]['S3file']
+        }
+      })
       // set fields sent to graphql resolver accessing form values and/or previous response
       // if not informed it will select all values from the form
       if (updateFields) {
