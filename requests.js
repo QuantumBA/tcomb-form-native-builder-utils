@@ -1,48 +1,45 @@
 import { createApolloFetch } from 'apollo-fetch'
 import stringTemplate from '@foqum/string-template'
 import { getPayloadError } from 'getpayload'
-import objectToFormData         from '@foqum/object-to-formdata'
+import objectToFormData from '@foqum/object-to-formdata'
 
+// Private helpers functions
 const removeEmptyKeys = (obj) => {
   if (!obj) return
   Object.entries(obj).forEach(([k, v]) => {
     if (!v && v !== 0) delete obj[k]
-    else if (Array.isArray(v) && v.length && typeof v[0] == 'object') {
-      v.forEach((e) => removeEmptyKeys(e))
+    else if (Array.isArray(v) && v.length && typeof v[0] === 'object') {
+      v.forEach(e => removeEmptyKeys(e))
     }
   })
 }
 
-// Implements recursive object serialization according to JSON spec but without quotes around the keys.
-function stringify(obj_from_json, depth = 0) {
-  if (Array.isArray(obj_from_json)) {
-    const obj = Object
-      .keys(obj_from_json)
-      .map(key => `{${stringify(obj_from_json[key])}}`)
-    return `[${obj}]`
-  }
-  if (typeof obj_from_json !== 'object') {
-    // not an object, stringify using native function
-    return JSON.stringify(obj_from_json)
-  }
-  depth += 1
+const isString = x => typeof x === 'string'
 
-  if (depth > 1 && typeof obj_from_json === 'object') {
-    const props = Object
-      .keys(obj_from_json)
-      .map(key => `{${key}:${stringify(obj_from_json[key], depth)}}`)
-      .join(',')
-    return `${props}`
-  }
-  const props = Object
-    .keys(obj_from_json)
-    .map(key => `${key}:${stringify(obj_from_json[key], depth)}`)
-    .join(',')
-  return `${props}`
+const getFieldName = (key) => {
+  if (isString(key)) return key
+  return Object.values(key)[0]
 }
 
-function isString(item) {
-  return typeof item === 'string'
+// Object serialization without quotes around the keys.
+// To be used with graphQL
+function stringify(input, depth = 0) {
+  // array
+  if (Array.isArray(input)) {
+    const obj = Object.values(input).map(v => `{${stringify(v)}}`)
+    return `[${obj}]`
+  }
+
+  // native type
+  if (typeof input !== 'object') return JSON.stringify(input)
+
+  // object
+  depth += 1
+  let stringArray = Object.keys(input).map(key => `${key}:${stringify(input[key], depth)}`)
+  if (depth > 1 && typeof input === 'object') {
+    stringArray = stringArray.map(obj => `{${obj}}`) // add brackets for objects
+  }
+  return stringArray.join(',')
 }
 
 async function processRemoteRequests(uriTemplate, stackedPlaceholders, headers, body = undefined) {
@@ -112,12 +109,6 @@ async function asyncForEach(array, callback) {
   }
 }
 
-function getFieldName(key) {
-  if (isString(key)) return key
-
-  return Object.values(key)[0]
-}
-
 async function processListRemoteUpdate(remote, formValues) {
 
   const responses = []
@@ -133,10 +124,9 @@ async function processListRemoteUpdate(remote, formValues) {
           })
         }
       })
-      Object.entries(postBody).forEach(([key, value]) =>{
-        if (typeof value === 'object'){
-          const index = value.indexOf('S3file')
-          delete value[0]['S3file']
+      Object.values(postBody).forEach((v) => {
+        if (typeof v === 'object') {
+          delete v[0].S3file
         }
       })
       // set fields sent to graphql resolver accessing form values and/or previous response
@@ -170,11 +160,9 @@ async function processListRemoteUpdate(remote, formValues) {
         })
       }
 
-      let response
       // Graphql API
       if (meta.graphql) {
-        response = await processRemoteUpdateGraphQL(uri, postBody, meta)
-        responses.push(response)
+        responses.push(await processRemoteUpdateGraphQL(uri, postBody, meta))
       } else {
         responses.push(await processRemoteUpdateRest(uri, postBody, contentType, headers, meta))
       }
@@ -193,4 +181,3 @@ export {
   processRemoteUpdateRest,
   processListRemoteUpdate,
 }
-
