@@ -125,7 +125,7 @@ async function processListRemoteUpdate(remote, formValues) {
         }
       })
       Object.values(postBody).forEach((v) => {
-        if (typeof v === 'object') {
+        if (typeof v === 'object' && v !== null) {
           delete v[0].S3file
         }
       })
