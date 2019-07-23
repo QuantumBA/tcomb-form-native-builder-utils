@@ -7,7 +7,7 @@ import objectToFormData from '@foqum/object-to-formdata'
 const removeEmptyKeys = (obj) => {
   if (!obj) return
   Object.entries(obj).forEach(([k, v]) => {
-    if (!v && v !== 0) delete obj[k]
+    if (!v && v !== 0 && typeof v !== 'boolean') delete obj[k]
     else if (Array.isArray(v) && v.length && typeof v[0] === 'object') {
       v.forEach(e => removeEmptyKeys(e))
     }
