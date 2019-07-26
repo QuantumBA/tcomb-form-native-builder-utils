@@ -126,7 +126,7 @@ async function processListRemoteUpdate(remote, formValues) {
       })
       Object.values(postBody).forEach((v) => {
         if (typeof v === 'object' && v !== null) {
-          delete v[0].S3file
+          delete v.S3file
         }
       })
       // set fields sent to graphql resolver accessing form values and/or previous response
