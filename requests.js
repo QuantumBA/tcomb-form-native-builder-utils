@@ -41,6 +41,12 @@ function getArrayOfsubItems(array, startCharacter, endCharacter) {
   const end = array.indexOf(endCharacter)
   return array.slice(start + 1, end).split(',').map(field => field.trim())
 }
+
+function getSubitems(array, splitCharacter) {
+  const items = array.split(splitCharacter)[1]
+  return items.split(',').map(item => item.trim())
+}
+
 async function processRemoteRequests(uriTemplate, stackedPlaceholders, headers, body = undefined) {
   let response = {}
   const input = stringTemplate(uriTemplate, stackedPlaceholders, /\$\{([0-9a-zA-Z_\.]+)\}/g, '${') // eslint-disable-line
@@ -119,7 +125,7 @@ async function processListRemoteUpdate(remote, formValues) {
       if (updateFields) {
         bodyPost = {}
         Object.entries(postBody).forEach(([field, fieldValue]) => {
-          updateFields.map((updateField) =>  {
+          updateFields.map((updateField) => {
             if (updateFields.includes(field)) {
               bodyPost[field] = fieldValue
               // If updated fields are in a sublist
@@ -131,9 +137,22 @@ async function processListRemoteUpdate(remote, formValues) {
                 const requiredValuesForObject = Object.keys(items)
                   .filter(field => updateFieldsSplitted.includes(field))
                   .reduce((obj, item) => {return { ...obj, [item]: items[item] } }, {}) // eslint-disable-line
+                  // Check if a field needs the value of another field
+                  // Format-> Field: field with needed value
+                updateFieldsSplitted.forEach((field) => {
+                  if (field.indexOf(':') !== -1) {
+                    const val = field.split(':').map(x => x.trim())
+                    requiredValuesForObject[val[0]] = items[val[1]]
+                  }
+                })
                 arrayOfItems.push(requiredValuesForObject)
               })
               bodyPost[field] = arrayOfItems
+            } else if (isString(updateField) && updateField.indexOf('=>') !== -1 && updateField.startsWith(field)) {
+              const subItems = getSubitems(updateField, '=>')
+              subItems.forEach((item) => {
+                bodyPost[item] = fieldValue[0][item]
+              })
             }
           })
         })
@@ -155,6 +174,10 @@ async function processListRemoteUpdate(remote, formValues) {
             const realFieldName = fieldName.split('.')[1]
             const indexResponse = parseInt(fieldName.split('[')[1].split(']')[0], 10)
             bodyPost[Object.keys(objectField)[0]] = Object.assign({}, { [realFieldName]: responses[indexResponse].data.response[realFieldName] })
+          } else if (fieldName.indexOf('{') !== -1) {
+            const realFieldName = fieldName.split('{')[0]
+            const fieldNameID = getArrayOfsubItems(fieldName, '{', '}')
+            bodyPost[Object.keys(objectField)[0]] = Object.assign({}, { [fieldNameID[0]]: formValues[realFieldName][0][fieldNameID[0]] })
           } else {
             bodyPost[Object.keys(objectField)[0]] = Object.assign({}, { [fieldName]: formValues[fieldName] })
           }
