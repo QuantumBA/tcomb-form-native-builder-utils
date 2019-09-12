@@ -1,6 +1,6 @@
 {
 	"name": "tcomb-form-native-builder-utils",
-	"version": "0.0.15",
+	"version": "0.0.16",
 	"description": "Utilities for tcomb-form-native-builder and builder-components",
 	"main": "index.js",
 	"scripts": {
