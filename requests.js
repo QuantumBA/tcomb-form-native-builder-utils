@@ -100,11 +100,13 @@ async function asyncForEach(array, callback) {
     await callback(array[index], index, array) // eslint-disable-line
   }
 }
-async function processListRemoteUpdate(remote, formValues) {
+async function processListRemoteUpdate(remote, formValues, stackedPlaceholders = {}) {
   const responses = []
   const responsesFn = async () => {
     await asyncForEach(remote, async (remoteObject) => {
-      const { meta, uri } = remoteObject
+      const { meta } = remoteObject
+      let { uri } = remoteObject
+      uri = stringTemplate(uri, stackedPlaceholders, /\$\{([0-9a-zA-Z_\.]+)\}/g, '${') // eslint-disable-line
       const { headers = {}, contentType = 'multipart/form-data', updateFields } = meta
       const postBody = JSON.parse(JSON.stringify(formValues))
       Object.keys(postBody).forEach((k) => {
