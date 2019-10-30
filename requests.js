@@ -2,6 +2,7 @@ import { createApolloFetch } from 'apollo-fetch'
 import stringTemplate from '@foqum/string-template'
 import { getPayloadError } from 'getpayload'
 import objectToFormData from '@foqum/object-to-formdata'
+import { element } from 'prop-types'
 // Private helpers functions
 const removeEmptyKeys = (obj) => {
   if (!obj) return
@@ -95,20 +96,32 @@ async function processRemoteUpdateRest(uri, body, contentType, headers) {
     body,
   }).then(getPayloadError).then(resp => resp)
 }
+
+// Aux function for concatenating requests, one after another
 async function asyncForEach(array, callback) {
   for (let index = 0; index < array.length; index += 1) {
     await callback(array[index], index, array) // eslint-disable-line
   }
 }
+
+// This function will process all requests in the remote section one after another taking into account the following info:
+// updateFields: What fields are sent in the remote request
+// summaryFields: What fields are stored back in the origin
+// uri: endpoint pointing to the remote source
+// formValues: values of all the fields in the form rendered by tcomb
 async function processListRemoteUpdate(remote, formValues, stackedPlaceholders = {}) {
   const responses = []
   const responsesFn = async () => {
     await asyncForEach(remote, async (remoteObject) => {
       const { meta } = remoteObject
       let { uri } = remoteObject
+
+      // Replace al strings with ${} in the uri
       uri = stringTemplate(uri, stackedPlaceholders, /\$\{([0-9a-zA-Z_\.]+)\}/g, '${') // eslint-disable-line
       const { headers = {}, contentType = 'multipart/form-data', updateFields } = meta
       const postBody = JSON.parse(JSON.stringify(formValues))
+
+      // Remove S3 field from the request if exists
       Object.keys(postBody).forEach((k) => {
         if (Array.isArray(postBody[k])) {
           postBody[k].forEach((v) => {
@@ -121,6 +134,7 @@ async function processListRemoteUpdate(remote, formValues, stackedPlaceholders =
           delete v.S3file
         }
       })
+
       // set fields sent to graphql resolver accessing form values and/or previous response
       // if not informed it will select all values from the form
       let bodyPost = {}
@@ -128,7 +142,15 @@ async function processListRemoteUpdate(remote, formValues, stackedPlaceholders =
         bodyPost = {}
         Object.entries(postBody).forEach(([field, fieldValue]) => {
           updateFields.map((updateField) => {
-            if (updateFields.includes(field)) {
+            // Update fields with mapping
+            // Inputs:
+            // updateFields -> [{objectDataLayer1: fieldNameForm1}, {objectDataLayer2: fieldNameForm2}, ...]
+            // updateField -> {objectDataLayer1: fieldNameForm1}
+            // postBody -> [{fieldName1: fieldValue1}, {fieldName2: fieldValue2}]
+            // desiredResult -> bodyPost = {objectDataLayer1: fieldValue1}
+            if (!isString(updateField) && typeof updateField === 'object' && updateField[`${Object.keys(updateField)[0]}`] === field){
+              bodyPost[`${Object.keys(updateField)[0]}`] = fieldValue
+            } else if (isString(updateField) && updateFields.includes(field)) { // Update fields without mapping (retrocompatibility)
               bodyPost[field] = fieldValue
               // If updated fields are in a sublist
             } else if (isString(updateField) && updateField.indexOf('{') !== -1 && updateField.startsWith(field)) {
@@ -158,7 +180,6 @@ async function processListRemoteUpdate(remote, formValues, stackedPlaceholders =
             }
           })
         })
-
         const previousFields = updateFields.filter(field => getFieldName(field).includes('_prev') && isString(field))
         if (previousFields.length > 0) {
           previousFields.forEach((previusField) => {
@@ -169,21 +190,24 @@ async function processListRemoteUpdate(remote, formValues, stackedPlaceholders =
           })
         }
         // encapsulate fields in objects if necessary
-        const objectsUpdateFields = updateFields.filter(key => !isString(key))
-        objectsUpdateFields.forEach((objectField) => {
-          const fieldName = getFieldName(objectField)
-          if (fieldName.startsWith('_prev[')) {
-            const realFieldName = fieldName.split('.')[1]
-            const indexResponse = parseInt(fieldName.split('[')[1].split(']')[0], 10)
-            bodyPost[Object.keys(objectField)[0]] = Object.assign({}, { [realFieldName]: responses[indexResponse].data.response[realFieldName] })
-          } else if (fieldName.indexOf('{') !== -1) {
-            const realFieldName = fieldName.split('{')[0]
-            const fieldNameID = getArrayOfsubItems(fieldName, '{', '}')
-            bodyPost[Object.keys(objectField)[0]] = Object.assign({}, { [fieldNameID[0]]: formValues[realFieldName][0][fieldNameID[0]] })
-          } else {
-            bodyPost[Object.keys(objectField)[0]] = Object.assign({}, { [fieldName]: formValues[fieldName] })
-          }
-        })
+        // if every update field is an objects we have mappings (temporal workaround) revisit when treating lists and mappings
+        if (!updateFields.every(element => !isString(element))){
+          const objectsUpdateFields = updateFields.filter(key => !isString(key))
+          objectsUpdateFields.forEach((objectField) => {
+            const fieldName = getFieldName(objectField)
+            if (fieldName.startsWith('_prev[')) {
+              const realFieldName = fieldName.split('.')[1]
+              const indexResponse = parseInt(fieldName.split('[')[1].split(']')[0], 10)
+              bodyPost[Object.keys(objectField)[0]] = Object.assign({}, { [realFieldName]: responses[indexResponse].data.response[realFieldName] })
+            } else if (fieldName.indexOf('{') !== -1) {
+              const realFieldName = fieldName.split('{')[0]
+              const fieldNameID = getArrayOfsubItems(fieldName, '{', '}')
+              bodyPost[Object.keys(objectField)[0]] = Object.assign({}, { [fieldNameID[0]]: formValues[realFieldName][0][fieldNameID[0]] })
+            } else {
+              bodyPost[Object.keys(objectField)[0]] = Object.assign({}, { [fieldName]: formValues[fieldName] })
+            }
+          })
+        }
       }
       // Graphql API
       if (meta.graphql) {
