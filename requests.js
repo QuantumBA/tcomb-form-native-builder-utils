@@ -77,7 +77,7 @@ async function processRemoteUpdateGraphQL(uri, body, meta) {
   })
   if (meta.graphql.method) {
     const response_fields = meta.graphql.response_fields ? meta.graphql.response_fields.join(' ') : '_id'
-    const mutation = `mutation { response: ${meta.graphql.method}(${body_query}) {${response_fields}} }`
+    const mutation = `${meta.graphql.type === 'query' ? 'query' : 'mutation'} { response: ${meta.graphql.method}(${body_query}) {${response_fields}} }`
     return apolloFetch({ query: mutation })
   }
   // method not in method (retrocompatibility)
