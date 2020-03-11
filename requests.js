@@ -76,7 +76,7 @@ async function processRemoteUpdateGraphQL(uri, body, meta) {
     next()
   })
   if (meta.graphql.method) {
-    const response_fields = meta.graphql.response_fields ? meta.graphql.response_fields.join(' ') : '_id'
+    const response_fields = meta.graphql.response_fields ? (meta.graphql.type === 'relation' ? meta.graphql.response_fields : meta.graphql.response_fields.join(' ')) : '_uid'
     const mutation = `${meta.graphql.type === 'query' ? 'query' : 'mutation'} { response: ${meta.graphql.method}(${body_query}) {${response_fields}} }`
     return apolloFetch({ query: mutation })
   }
@@ -180,14 +180,20 @@ async function processListRemoteUpdate(remote, formValues, stackedPlaceholders =
             }
           })
         })
-        const previousFields = updateFields.filter(field => getFieldName(field).includes('_prev') && isString(field))
-        if (previousFields.length > 0) {
-          previousFields.forEach((previusField) => {
-            const splitArray = getFieldName(previusField).split('.')
-            const nameField = splitArray[splitArray.length - 1]
-            const indexResponse = parseInt(getFieldName(previusField).split('[')[1].split(']')[0], 10)
-            bodyPost[nameField] = responses[indexResponse].data.response[nameField]
-          })
+        if (meta.graphql.type === 'relation') {
+          const previousFields = updateFields.filter(field => getFieldName(field).includes('_prev'))
+          if (previousFields.length > 0) {
+            previousFields.forEach((previousField) => {
+              Object.entries(previousField).forEach(([direction, prevValue]) => {
+                const splitArray = getFieldName(prevValue).split('.')
+                const nameField = splitArray[splitArray.length - 1]
+                const indexResponse = parseInt(getFieldName(prevValue).split('[')[1].split(']')[0], 10)
+                const bodyPostValue = {}
+                bodyPostValue[nameField] = responses[indexResponse].data.response[0] ? responses[indexResponse].data.response[0][nameField] : responses[indexResponse].data.response[nameField]
+                bodyPost[direction] = bodyPostValue
+              })
+            })
+          }
         }
         // encapsulate fields in objects if necessary
         // if every update field is an objects we have mappings (temporal workaround) revisit when treating lists and mappings
