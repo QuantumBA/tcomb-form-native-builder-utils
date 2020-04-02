@@ -59,7 +59,8 @@ async function processRemoteRequests(uriTemplate, stackedPlaceholders, headers, 
     const apolloFetch = createApolloFetch({
       uri: input,
     })
-    response = await apolloFetch({ query: body })
+    const query = `query {${body}}`
+    response = await apolloFetch({ query: query })
   }
   return response
 }
